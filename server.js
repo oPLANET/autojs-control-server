@@ -25,7 +25,7 @@ wss.on("connection", (ws) => {
         console.log("📢 广播指令:", data.data);
         for (const client of clients) {
           if (client.readyState === 1) {
-            client.send(JSON.stringify({ type: "command", data: data.data }));
+            client.send(JSON.stringify(data));
           }
         }
       }
@@ -43,3 +43,4 @@ wss.on("connection", (ws) => {
 server.listen(PORT, () => {
   console.log(`✅ WebSocket 控制服务器已启动，端口 ${PORT}`);
 });
+
