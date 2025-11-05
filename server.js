@@ -1,42 +1,45 @@
 // server.js
-// 简单的 WebSocket 控制服务器，支持 Render / Railway / VPS 免费部署
-const WebSocket = require("ws");
-const PORT = process.env.PORT || 10000; // Render 或 Railway 自动分配端口
-const wss = new WebSocket.Server({ port: PORT });
+import { WebSocketServer } from "ws";
+import http from "http";
 
-console.log(`✅ WebSocket 控制服务器已启动，端口 ${PORT}`);
+const PORT = process.env.PORT || 10000;
+const server = http.createServer();
+const wss = new WebSocketServer({ server });
 
 let clients = new Set();
 
-wss.on("connection", ws => {
-    clients.add(ws);
-    console.log("📱 新设备连接，目前在线数:", clients.size);
-    ws.send(JSON.stringify({ type: "info", msg: "connected" }));
+wss.on("connection", (ws) => {
+  clients.add(ws);
+  console.log("✅ 新客户端已连接，总连接数:", clients.size);
 
-    ws.on("message", msg => {
-        msg = msg.toString().trim();
-        console.log("📩 收到消息:", msg);
+  // 连接确认
+  ws.send(JSON.stringify({ type: "info", msg: "connected" }));
 
-        if (msg === "start") {
-            console.log("🚀 主控机发出启动命令，广播中...");
-            broadcast({ type: "command", cmd: "start" });
-        } else if (msg === "ping") {
-            ws.send(JSON.stringify({ type: "pong" }));
-        } else {
-            console.log("⚠️ 未知消息:", msg);
+  ws.on("message", (message) => {
+    console.log("📩 收到消息:", message.toString());
+    try {
+      const data = JSON.parse(message);
+
+      // 如果是指令，广播给所有客户端（包括自己）
+      if (data.type === "command") {
+        console.log("📢 广播指令:", data.data);
+        for (const client of clients) {
+          if (client.readyState === 1) {
+            client.send(JSON.stringify({ type: "command", data: data.data }));
+          }
         }
-    });
+      }
+    } catch (err) {
+      console.error("❌ 无法解析消息:", err);
+    }
+  });
 
-    ws.on("close", () => {
-        clients.delete(ws);
-        console.log("❎ 设备断开，目前在线数:", clients.size);
-    });
+  ws.on("close", () => {
+    clients.delete(ws);
+    console.log("🔌 客户端断开，总连接数:", clients.size);
+  });
 });
 
-function broadcast(obj) {
-    for (let ws of clients) {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(obj));
-        }
-    }
-}
+server.listen(PORT, () => {
+  console.log(`✅ WebSocket 控制服务器已启动，端口 ${PORT}`);
+});
