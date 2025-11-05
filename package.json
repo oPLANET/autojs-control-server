@@ -1,7 +1,8 @@
 {
   "name": "autojs-control-server",
   "version": "1.0.0",
-  "description": "A simple WebSocket control server for Auto.js multi-device sync execution",
+  "type": "module",
+  "description": "WebSocket control server for Auto.js devices",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
